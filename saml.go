@@ -102,17 +102,17 @@ func (sp *SAMLServiceProvider) BuildAuthURL(relayState string) (string, error) {
 
 	fw, err := flate.NewWriter(buf, flate.DefaultCompression)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("flate NewWriter error: %v", err)
 	}
 
 	_, err = fw.Write([]byte(authnRequest))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("flate.Writer Write error: %v", err)
 	}
 
 	err = fw.Close()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("flate.Writer Close error: %v", err)
 	}
 
 	qs := parsedUrl.Query()
