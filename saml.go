@@ -6,10 +6,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/beevik/etree"
@@ -100,14 +98,26 @@ func (sp *SAMLServiceProvider) BuildAuthURL(relayState string) (string, error) {
 		return "", err
 	}
 
-	bs, err := ioutil.ReadAll(flate.NewReader(strings.NewReader(authnRequest)))
+	buf := &bytes.Buffer{}
+
+	fw, err := flate.NewWriter(buf, 1)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = fw.Write([]byte(authnRequest))
+	if err != nil {
+		return "", err
+	}
+
+	err = fw.Close()
 	if err != nil {
 		return "", err
 	}
 
 	qs := parsedUrl.Query()
 
-	qs.Add("SAMLRequest", base64.StdEncoding.EncodeToString(bs))
+	qs.Add("SAMLRequest", base64.StdEncoding.EncodeToString(buf.Bytes()))
 
 	if relayState != "" {
 		qs.Add("RelayState", relayState)
