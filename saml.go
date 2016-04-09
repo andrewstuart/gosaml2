@@ -100,7 +100,7 @@ func (sp *SAMLServiceProvider) BuildAuthURL(relayState string) (string, error) {
 
 	buf := &bytes.Buffer{}
 
-	fw, err := flate.NewWriter(buf, 1)
+	fw, err := flate.NewWriter(buf, flate.DefaultCompression)
 	if err != nil {
 		return "", err
 	}
