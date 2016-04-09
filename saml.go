@@ -2,11 +2,14 @@ package saml2
 
 import (
 	"bytes"
+	"compress/flate"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/beevik/etree"
@@ -97,9 +100,14 @@ func (sp *SAMLServiceProvider) BuildAuthURL(relayState string) (string, error) {
 		return "", err
 	}
 
+	bs, err := ioutil.ReadAll(flate.NewReader(strings.NewReader(authnRequest)))
+	if err != nil {
+		return "", err
+	}
+
 	qs := parsedUrl.Query()
 
-	qs.Add("SAMLRequest", base64.StdEncoding.EncodeToString([]byte(authnRequest)))
+	qs.Add("SAMLRequest", base64.StdEncoding.EncodeToString(bs))
 
 	if relayState != "" {
 		qs.Add("RelayState", relayState)
