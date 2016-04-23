@@ -3,9 +3,12 @@ package saml2
 import (
 	"bytes"
 	"compress/flate"
+	"crypto/rsa"
+	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
 	"net/url"
 	"strconv"
 	"time"
@@ -13,9 +16,29 @@ import (
 	"github.com/beevik/etree"
 	"github.com/russellhaering/goxmldsig"
 	"github.com/satori/go.uuid"
+
+	s2 "github.com/andrewstuart/gosaml2"
 )
 
 const issueInstantFormat = "2006-01-02T15:04:05"
+
+type TLSCertKeyStore tls.Certificate
+
+func (d TLSCertKeyStore) GetKeyPair() (*rsa.PrivateKey, []byte, error) {
+	pk, ok := d.PrivateKey.(*rsa.PrivateKey)
+
+	if !ok {
+		return nil, nil, fmt.Errorf("Private key was not RSA")
+	}
+
+	if len(d.Certificate) < 1 {
+		return nil, nil, fmt.Errorf("No public certificates provided")
+	}
+
+	crt := d.Certificate[0]
+
+	return pk, crt, nil
+}
 
 type SAMLServiceProvider struct {
 	IdentityProviderSSOURL      string
@@ -26,7 +49,12 @@ type SAMLServiceProvider struct {
 	IDPCertificateStore         dsig.X509CertificateStore
 	SPKeyStore                  dsig.X509KeyStore
 	NameIdFormat                string
+	SkipSignatureValidation     bool
 }
+
+var (
+	ErrMissingAssertion = errors.New("Missing Assertion element")
+)
 
 func (sp *SAMLServiceProvider) SigningContext() *dsig.SigningContext {
 	return dsig.NewDefaultSigningContext(sp.SPKeyStore)
@@ -52,6 +80,9 @@ func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
 	authnRequest.CreateAttr("AssertionConsumerServiceIndex", "0")
 	authnRequest.CreateAttr("AttributeConsumingServiceIndex", "0")
 	authnRequest.CreateAttr("IssueInstant", time.Now().UTC().Format(issueInstantFormat))
+
+	authnRequest.CreateAttr("Destination", "http://idp.astuart.co/idp/profile/SAML2/Redirect/SSO")
+	// authnRequest.CreateAttr("Destination", sp.IdentityProviderSSOURL)
 
 	authnRequest.CreateElement("saml:Issuer").SetText(sp.IdentityProviderIssuer)
 
@@ -154,7 +185,7 @@ func (sp *SAMLServiceProvider) Validate(el *etree.Element) error {
 
 	assertionElement := el.FindElement(AssertionTag)
 	if assertionElement == nil {
-		return errors.New("Missing Assertion element")
+		return ErrMissingAssertion
 	}
 
 	subjectStatement := assertionElement.FindElement(childPath(assertionElement.Space, SubjectTag))
@@ -197,7 +228,6 @@ func (sp *SAMLServiceProvider) Validate(el *etree.Element) error {
 	}
 
 	return nil
-
 }
 
 func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (*etree.Element, error) {
@@ -213,16 +243,42 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 	}
 
 	response, err := sp.validationContext().Validate(doc.Root())
-	if err != nil {
+	if err != nil && !sp.SkipSignatureValidation {
 		return nil, err
 	}
 
 	err = sp.Validate(response)
-	if err != nil {
+	if err != nil && err != ErrMissingAssertion {
 		return nil, err
 	}
 
-	return response, nil
+	log.Println(string(raw))
+
+	res, err := s2.NewResponseFromReader(bytes.NewReader(raw))
+
+	if err != nil {
+		return nil, fmt.Errorf("Error getting response: %v", err)
+	}
+
+	crt, ok := sp.SPKeyStore.(TLSCertKeyStore)
+	if !ok {
+		return nil, fmt.Errorf("Cannot get tls.Certificate from keystore")
+	}
+
+	docBytes, err := res.Decrypt(tls.Certificate(crt))
+
+	if err != nil {
+		return nil, fmt.Errorf("Error decrypting assertion: %v", err)
+	}
+
+	resDoc := etree.NewDocument()
+	err = resDoc.ReadFromBytes(docBytes)
+
+	if err != nil {
+		return nil, fmt.Errorf("Error reading decrypted assertion: %v", err)
+	}
+
+	return resDoc.Root(), nil
 }
 
 type ProxyRestriction struct {
