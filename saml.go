@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"log"
 	"net/url"
 	"strconv"
 	"time"
@@ -252,8 +251,6 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 		return nil, err
 	}
 
-	log.Println(string(raw))
-
 	res, err := s2.NewResponseFromReader(bytes.NewReader(raw))
 
 	if err != nil {
@@ -278,7 +275,10 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 		return nil, fmt.Errorf("Error reading decrypted assertion: %v", err)
 	}
 
-	return resDoc.Root(), nil
+	el := etree.NewElement("DecryptedAssertion")
+	el.AddChild(resDoc.Root())
+
+	return el, nil
 }
 
 type ProxyRestriction struct {
@@ -393,7 +393,7 @@ func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*A
 
 	assertionElement := el.FindElement(AssertionTag)
 	if assertionElement == nil {
-		return nil, errors.New("Missing Assertion")
+		return nil, ErrMissingAssertion
 	}
 
 	//Verify all conditions for the assertion
