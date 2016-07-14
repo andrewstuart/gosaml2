@@ -29,17 +29,35 @@ type Entity struct {
 	EntityID string `xml:"entityID,attr"`
 	Type     string
 
-	Keys []saml.EncryptedKey
-	// LogoutServices []LogoutService
-	NameIDFormats []string
-	// Consumers     []AssertionConsumer
+	Keys           []saml.EncryptedKey
+	LogoutServices []LogoutService
+	NameIDFormats  []string
+	Consumers      []AssertionConsumer
+}
+
+type endpoint struct {
+	Binding  string `xml:",attr"`
+	Location string `xml:",attr"`
+}
+
+// LogoutService is a combination of Logout URL and the SAML binding required
+// for exercising the logout mechanism.
+type LogoutService struct {
+	endpoint
+}
+
+type AssertionConsumer struct {
+	endpoint
+	Default bool `xml:"isDefault,attr"`
 }
 
 func (e *Entity) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 
 	*e = Entity{
-		Keys:          []saml.EncryptedKey{},
-		NameIDFormats: []string{},
+		Keys:           []saml.EncryptedKey{},
+		NameIDFormats:  []string{},
+		LogoutServices: []LogoutService{},
+		Consumers:      []AssertionConsumer{},
 	}
 
 	// StartElement should always be an EntityDescriptor, thus having ID and
@@ -80,6 +98,20 @@ func (e *Entity) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 					return err
 				}
 				e.NameIDFormats = append(e.NameIDFormats, nid)
+			case descLogout:
+				var ls LogoutService
+				err = d.DecodeElement(&ls, &t)
+				if err != nil {
+					return err
+				}
+				e.LogoutServices = append(e.LogoutServices, ls)
+			case descACS:
+				var ac AssertionConsumer
+				err = d.DecodeElement(&ac, &t)
+				if err != nil {
+					return err
+				}
+				e.Consumers = append(e.Consumers, ac)
 			}
 
 		}
