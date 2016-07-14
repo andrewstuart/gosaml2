@@ -24,6 +24,7 @@ const (
 	descACS    = "AssertionConsumerService"
 )
 
+// Entity represents a described entity within SAML2.0 Metadata
 type Entity struct {
 	ID string `xml:",attr"`
 	// EntityID is the unique id for the specified entity. This is most often a
@@ -32,7 +33,7 @@ type Entity struct {
 	// Type indicates whether this entity should be treated as an SP or IDP
 	Type string
 
-	Keys           []saml2.EncryptedKey
+	Keys           []saml2.Key
 	LogoutServices []LogoutService
 	NameIDFormats  []string
 	Consumers      []AssertionConsumer
@@ -49,6 +50,8 @@ type LogoutService struct {
 	endpoint
 }
 
+// AssertionConsumer is a type that represents a SAML2 service provider
+// endpoint
 type AssertionConsumer struct {
 	endpoint
 	// Default indicates whether or not this assertion consumer should be treated
@@ -56,9 +59,10 @@ type AssertionConsumer struct {
 	Default bool `xml:"isDefault,attr"`
 }
 
+// UnmarshalXML implements xml.Unmarshaler for Entity
 func (e *Entity) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	*e = Entity{
-		Keys:           []saml2.EncryptedKey{},
+		Keys:           []saml2.Key{},
 		NameIDFormats:  []string{},
 		LogoutServices: []LogoutService{},
 		Consumers:      []AssertionConsumer{},
@@ -89,7 +93,7 @@ func (e *Entity) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 			case descIDP:
 				e.Type = TypeIDP
 			case descKey:
-				var k saml2.EncryptedKey
+				var k saml2.Key
 				err = d.DecodeElement(&k, &t)
 				if err != nil {
 					return err

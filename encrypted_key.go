@@ -17,7 +17,7 @@ import (
 
 //EncryptedKey contains the decryption key data from the saml2 core and xmlenc
 //standards.
-type EncryptedKey struct {
+type Key struct {
 	// EncryptionMethod string `xml:"EncryptionMethod>Algorithm"`
 	X509Data         string `xml:"KeyInfo>X509Data>X509Certificate"`
 	CipherValue      string `xml:"CipherData>CipherValue"`
@@ -26,8 +26,8 @@ type EncryptedKey struct {
 }
 
 // Cert returns a *tls.Certificate for the given Key data
-func (ec *EncryptedKey) Cert() (*tls.Certificate, error) {
-	bs, err := xmlBytes(ec.X509Data)
+func (k *Key) Cert() (*tls.Certificate, error) {
+	bs, err := xmlBytes(k.X509Data)
 
 	if err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ const (
 )
 
 //DecryptSymmetricKey returns the private key contained in the EncryptedKey document
-func (ek *EncryptedKey) DecryptSymmetricKey(cert tls.Certificate) (cipher.Block, error) {
+func (ek *Key) DecryptSymmetricKey(cert tls.Certificate) (cipher.Block, error) {
 
 	encCert, err := xmlBytes(ek.X509Data)
 	if err != nil {

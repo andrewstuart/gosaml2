@@ -16,7 +16,7 @@ type Response struct {
 	Issuer           string           `xml:"Issuer"`
 	Value            string           `xml:",attr"`
 	EncryptionMethod EncryptionMethod `xml:"EncryptedAssertion>EncryptedData>EncryptionMethod"`
-	Key              EncryptedKey     `xml:"EncryptedAssertion>EncryptedData>KeyInfo>EncryptedKey"`
+	Key              Key              `xml:"EncryptedAssertion>EncryptedData>KeyInfo>EncryptedKey"`
 	Data             string           `xml:"EncryptedAssertion>EncryptedData>CipherData>CipherValue"`
 	Signature        string           `xml:"Signature>SignatureValue"`
 	Digest           string           `xml:"Signature>SignedInfo>Reference>DigestValue"`
