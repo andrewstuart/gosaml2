@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"hash"
 )
@@ -21,6 +22,26 @@ type EncryptedKey struct {
 	X509Data         string `xml:"KeyInfo>X509Data>X509Certificate"`
 	CipherValue      string `xml:"CipherData>CipherValue"`
 	EncryptionMethod EncryptionMethod
+	Usage            string `xml:"use,attr"`
+}
+
+// Cert returns a *tls.Certificate for the given Key data
+func (ec *EncryptedKey) Cert() (*tls.Certificate, error) {
+	bs, err := xmlBytes(ec.X509Data)
+
+	if err != nil {
+		return nil, err
+	}
+	crt := tls.Certificate{
+		Certificate: [][]byte{bs},
+	}
+	leaf, err := x509.ParseCertificate(bs)
+	if err != nil {
+		return nil, err
+	}
+	crt.Leaf = leaf
+
+	return &crt, nil
 }
 
 //EncryptionMethod specifies the type of encryption that was used.

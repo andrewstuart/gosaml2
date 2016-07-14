@@ -14,7 +14,7 @@ func TestMetadata(t *testing.T) {
 
 	var es Entities
 
-	xml.Unmarshal(bs, &es)
+	require.NoError(t, xml.Unmarshal(bs, &es))
 
 	require.Len(t, es, 3, "wrong number of entities returned")
 
@@ -41,4 +41,18 @@ func TestMetadata(t *testing.T) {
 
 	require.Len(t, f.Consumers, 1)
 	require.Equal(t, true, f.Consumers[0].Default, "first consumer was not a default")
+}
+
+func TestKey(t *testing.T) {
+	bs, err := ioutil.ReadFile("./testdata/idp.test-metadata.xml")
+	require.NoError(t, err, "error reading metadata test file")
+
+	var es Entities
+	require.NoError(t, xml.Unmarshal(bs, &es))
+
+	c, err := es[0].Keys[0].Cert()
+	require.NoError(t, err)
+
+	require.Len(t, c.Certificate, 1)
+	require.Equal(t, "apollo", c.Leaf.Subject.CommonName)
 }

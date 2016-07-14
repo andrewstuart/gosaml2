@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"astuart.co/astuart.co/gosaml2"
+	"astuart.co/gosaml2"
 )
 
 const (
@@ -32,7 +32,7 @@ type Entity struct {
 	// Type indicates whether this entity should be treated as an SP or IDP
 	Type string
 
-	Keys           []saml.EncryptedKey
+	Keys           []saml2.EncryptedKey
 	LogoutServices []LogoutService
 	NameIDFormats  []string
 	Consumers      []AssertionConsumer
@@ -58,7 +58,7 @@ type AssertionConsumer struct {
 
 func (e *Entity) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	*e = Entity{
-		Keys:           []saml.EncryptedKey{},
+		Keys:           []saml2.EncryptedKey{},
 		NameIDFormats:  []string{},
 		LogoutServices: []LogoutService{},
 		Consumers:      []AssertionConsumer{},
@@ -89,7 +89,7 @@ func (e *Entity) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 			case descIDP:
 				e.Type = TypeIDP
 			case descKey:
-				var k saml.EncryptedKey
+				var k saml2.EncryptedKey
 				err = d.DecodeElement(&k, &t)
 				if err != nil {
 					return err
