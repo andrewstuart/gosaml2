@@ -25,9 +25,12 @@ const (
 )
 
 type Entity struct {
-	ID       string `xml:",attr"`
+	ID string `xml:",attr"`
+	// EntityID is the unique id for the specified entity. This is most often a
+	// URI.
 	EntityID string `xml:"entityID,attr"`
-	Type     string
+	// Type indicates whether this entity should be treated as an SP or IDP
+	Type string
 
 	Keys           []saml.EncryptedKey
 	LogoutServices []LogoutService
@@ -48,11 +51,12 @@ type LogoutService struct {
 
 type AssertionConsumer struct {
 	endpoint
+	// Default indicates whether or not this assertion consumer should be treated
+	// as the default
 	Default bool `xml:"isDefault,attr"`
 }
 
 func (e *Entity) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-
 	*e = Entity{
 		Keys:           []saml.EncryptedKey{},
 		NameIDFormats:  []string{},
