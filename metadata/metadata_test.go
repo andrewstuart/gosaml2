@@ -18,13 +18,21 @@ func TestMetadata(t *testing.T) {
 
 	require.Len(t, es, 3, "wrong number of entities returned")
 
-	expectedIDs := []string{
-		"https://portal.astuart.co/uPortal",
-		"https://saml2.test.astuart.co/sso/saml2",
-		"https://idp.astuart.co/idp/shibboleth",
+	expectationsTable := []struct{ eid, t string }{
+		{eid: "https://portal.astuart.co/uPortal", t: TypeSP},
+		{eid: "https://saml2.test.astuart.co/sso/saml2", t: TypeSP},
+		{eid: "https://idp.astuart.co/idp/shibboleth", t: TypeIDP},
 	}
 
-	for i := range expectedIDs {
-		require.Equal(t, expectedIDs[i], es[i].EntityID, "wrong entityID for item %d", i)
+	for i := range expectationsTable {
+		require.Equal(t, expectationsTable[i].eid, es[i].EntityID, "wrong entityID for item %d", i)
+		require.Equal(t, expectationsTable[i].t, es[i].Type, "wrong type for item %d", i)
 	}
+
+	f := es[0]
+	require.Len(t, f.Keys, 2, "wrong number of keys for first item")
+	require.Equal(t, f.Keys[0].Usage, "signing")
+	require.Equal(t, f.Keys[1].Usage, "encryption")
+
+	require.Len(t, f.NameIDFormats, 5, "wrong number of nameidformats")
 }

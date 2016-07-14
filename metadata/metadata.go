@@ -7,11 +7,6 @@ import (
 	"time"
 )
 
-const (
-	eds = "EntitiesDescriptor"
-	ed  = "EntityDescriptor"
-)
-
 // Entities is an abstraction over a list of entities (including single-length
 // lists)
 type Entities []Entity
@@ -45,18 +40,11 @@ func (e *Entities) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 
 		switch t := t.(type) {
 		case xml.StartElement:
-			if t.Name.Local == ed {
+			if t.Name.Local == descEnt {
 				var en Entity
 				d.DecodeElement(&en, &t)
 				*e = append(*e, en)
 			}
 		}
 	}
-
-	return nil
-}
-
-type Entity struct {
-	ID       string `xml:",attr"`
-	EntityID string `xml:"entityID,attr"`
 }
