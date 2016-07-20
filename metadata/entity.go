@@ -22,6 +22,7 @@ const (
 	descLogout = "SingleLogoutService"
 	descNID    = "NameIDFormat"
 	descACS    = "AssertionConsumerService"
+	descSSO    = "SingleSignOnService"
 )
 
 // Entity represents a described entity within SAML2.0 Metadata
@@ -33,10 +34,13 @@ type Entity struct {
 	// Type indicates whether this entity should be treated as an SP or IDP
 	Type string
 
-	Keys           []saml2.Key
-	LogoutServices []LogoutService
-	NameIDFormats  []string
-	Consumers      []AssertionConsumer
+	Keys               []saml2.Key
+	NameIDFormats      []string
+	AssertionConsumers []AssertionConsumer
+	SignAuthnReq       bool
+	LogoutServices     []LogoutService `xml:"SingleLogoutService"`
+	SSOServices        []SSOService
+	Consumers          []AssertionConsumer
 }
 
 type endpoint struct {
@@ -47,6 +51,11 @@ type endpoint struct {
 // LogoutService is a combination of Logout URL and the SAML binding required
 // for exercising the logout mechanism.
 type LogoutService struct {
+	endpoint
+}
+
+// SSOService is an endpoint/binding for Single Signon
+type SSOService struct {
 	endpoint
 }
 
@@ -65,6 +74,7 @@ func (e *Entity) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 		Keys:           []saml2.Key{},
 		NameIDFormats:  []string{},
 		LogoutServices: []LogoutService{},
+		SSOServices:    []SSOService{},
 		Consumers:      []AssertionConsumer{},
 	}
 
@@ -89,7 +99,14 @@ func (e *Entity) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 		case xml.StartElement:
 			switch t.Name.Local {
 			case descSP:
+				//SP Descriptor
 				e.Type = TypeSP
+				for _, att := range t.Attr {
+					switch att.Name.Local {
+					case "AuthnRequestsSigned":
+						e.SignAuthnReq = att.Value == "true"
+					}
+				}
 			case descIDP:
 				e.Type = TypeIDP
 			case descKey:
@@ -113,6 +130,13 @@ func (e *Entity) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 					return err
 				}
 				e.LogoutServices = append(e.LogoutServices, ls)
+			case descSSO:
+				var ls SSOService
+				err = d.DecodeElement(&ls, &t)
+				if err != nil {
+					return err
+				}
+				e.SSOServices = append(e.SSOServices, ls)
 			case descACS:
 				var ac AssertionConsumer
 				err = d.DecodeElement(&ac, &t)
@@ -121,7 +145,6 @@ func (e *Entity) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 				}
 				e.Consumers = append(e.Consumers, ac)
 			}
-
 		}
 
 		if err != nil {

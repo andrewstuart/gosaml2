@@ -39,6 +39,8 @@ func TestMetadata(t *testing.T) {
 	require.Equal(t, f.LogoutServices[0].Binding, "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST")
 	require.Equal(t, f.LogoutServices[0].Location, "https://portal.ccctcportal.org/uPortal/saml/SingleLogout")
 
+	require.Len(t, es[2].SSOServices, 4)
+
 	require.Len(t, f.Consumers, 1)
 	require.Equal(t, true, f.Consumers[0].Default, "first consumer was not a default")
 }
